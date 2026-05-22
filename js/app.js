@@ -8,6 +8,7 @@ const ctx = canvas.getContext('2d');
 const dateInput = document.getElementById('date-input');
 const updateBtn = document.getElementById('update-btn');
 const statusMsg = document.getElementById('status-msg');
+const minorPlanetsCb = document.getElementById('minor-planets-cb');
 // #endregion
 
 // #region Initialization
@@ -21,6 +22,10 @@ function init() {
 
     // Event Listeners
     updateBtn.addEventListener('click', handleUpdate);
+    minorPlanetsCb.addEventListener('change', (e) => {
+        state.showMinorPlanets = e.target.checked;
+        draw();
+    });
 
     // Pan & Zoom Listeners
     canvas.addEventListener('mousedown', (e) => {

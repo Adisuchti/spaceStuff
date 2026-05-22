@@ -12,7 +12,14 @@ export const PLANETS = [
     { id: '699', name: 'Saturn', color: '#ead6b8', radius: 7 },
     { id: '799', name: 'Uranus', color: '#d1e7e7', radius: 5.5 },
     { id: '899', name: 'Neptune', color: '#5b5ddf', radius: 5.5 },
-    { id: '999', name: 'Pluto', color: '#dddddd', radius: 2 }
+
+    // Dwarf and Minor Planets
+    { id: '999', name: 'Pluto', color: '#dddddd', radius: 2, isMinor: true },
+    { id: '1;', name: 'Ceres', color: '#a2b9bc', radius: 2, isMinor: true },
+    { id: '4;', name: 'Vesta', color: '#b2ad7f', radius: 1.8, isMinor: true },
+    { id: '136199;', name: 'Eris', color: '#f7786b', radius: 2.1, isMinor: true },
+    { id: '136108;', name: 'Haumea', color: '#c94c4c', radius: 2, isMinor: true },
+    { id: '136472;', name: 'Makemake', color: '#b1cbbb', radius: 2, isMinor: true }
 ];
 
 export const TILT_ANGLE = 60 * DEG_TO_RAD; // Angle to rotate X-axis for isometric view
@@ -28,6 +35,7 @@ export const state = {
     offsetY: 0,
     isDragging: false,
     dragStartX: 0,
-    dragStartY: 0
+    dragStartY: 0,
+    showMinorPlanets: false // Whether to display dwarf and minor planets on the canvas
 };
 // #endregion

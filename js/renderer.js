@@ -1,6 +1,6 @@
 import { project3Dto2D } from './projection.js';
 import { calculate3DPosition, solveKepler } from './orbitMath.js';
-import { CROSSHAIR_COLOR, CROSSHAIR_THICKNESS } from './config.js';
+import { CROSSHAIR_COLOR, CROSSHAIR_THICKNESS, state, AU_KM, TILT_ANGLE } from './config.js';
 
 // #region Canvas Drawing Routines
 export function drawScene(ctx, width, height, scale, offsetX, offsetY, planetData) {
@@ -8,6 +8,13 @@ export function drawScene(ctx, width, height, scale, offsetX, offsetY, planetDat
 
     // Draw Reference Plane Grid
     drawReferencePlane(ctx, width, height, scale, offsetX, offsetY);
+
+    // Draw Asteroid Belt if enabled
+    if (state.showMinorPlanets) {
+        const cx = width / 2 + offsetX;
+        const cy = height / 2 + offsetY;
+        drawAsteroidBelt(ctx, cx, cy, scale);
+    }
 
     // Draw Sun
     const sun2d = project3Dto2D(0, 0, 0, width, height, scale, offsetX, offsetY);
@@ -22,6 +29,7 @@ export function drawScene(ctx, width, height, scale, offsetX, offsetY, planetDat
 
     // Draw Orbits and Planets
     Object.values(planetData).forEach(planet => {
+        if (planet.isMinor && !state.showMinorPlanets) return;
         drawOrbit(ctx, width, height, scale, offsetX, offsetY, planet);
         drawPlanet(ctx, width, height, scale, offsetX, offsetY, planet);
     });
@@ -39,6 +47,23 @@ function drawReferencePlane(ctx, width, height, scale, offsetX, offsetY) {
     const p3 = project3Dto2D(0, -1e10, 0, width, height, scale, offsetX, offsetY);
     const p4 = project3Dto2D(0, 1e10, 0, width, height, scale, offsetX, offsetY);
     ctx.beginPath(); ctx.moveTo(p3.x2d, p3.y2d); ctx.lineTo(p4.x2d, p4.y2d); ctx.stroke();
+}
+
+function drawAsteroidBelt(ctx, cx, cy, scale) {
+    const innerRadius = 2.2 * AU_KM; // inner edge of belt in km (approx 2.2 AU)
+    const outerRadius = 3.2 * AU_KM; // outer edge of belt in km (approx 3.2 AU)
+
+    const rxInner = innerRadius * scale;
+    const ryInner = innerRadius * Math.cos(TILT_ANGLE) * scale;
+    
+    const rxOuter = outerRadius * scale;
+    const ryOuter = outerRadius * Math.cos(TILT_ANGLE) * scale;
+
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rxOuter, ryOuter, 0, 0, 2 * Math.PI);
+    ctx.ellipse(cx, cy, rxInner, ryInner, 0, 0, 2 * Math.PI);
+    ctx.fillStyle = 'rgba(128, 128, 128, 0.12)'; // grey semitransparent donut
+    ctx.fill('evenodd');
 }
 
 function drawOrbit(ctx, width, height, scale, offsetX, offsetY, planet) {

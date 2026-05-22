@@ -2,7 +2,7 @@ import { API_URL } from './config.js';
 
 // #region API Ephemeris Fetcher
 export async function fetchOrbitalElements(planet, dateStr, endDateStr) {
-    const targetUrl = `${API_URL}?format=json&COMMAND='${planet.id}'&OBJ_DATA='YES'&MAKE_EPHEM='YES'&EPHEM_TYPE='ELEMENTS'&CENTER='500@10'&START_TIME='${dateStr}'&STOP_TIME='${endDateStr}'&STEP_SIZE='1 d'`;
+    const targetUrl = `${API_URL}?format=json&COMMAND='${encodeURIComponent(planet.id)}'&OBJ_DATA='YES'&MAKE_EPHEM='YES'&EPHEM_TYPE='ELEMENTS'&CENTER='500@10'&START_TIME='${dateStr}'&STOP_TIME='${endDateStr}'&STEP_SIZE='1 d'`;
     const proxyUrl = `proxy.php?url=${encodeURIComponent(targetUrl)}`;
 
     const response = await fetch(proxyUrl);

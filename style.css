@@ -158,3 +158,29 @@ button.loading .spinner {
     font-size: 0.75rem;
     color: var(--text-secondary);
 }
+
+/* Checkbox Styling */
+.checkbox-group {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #ffffff;
+    cursor: pointer;
+    margin: 0;
+}
+
+.checkbox-group label {
+    cursor: pointer;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    user-select: none;
+    color: var(--text-secondary);
+}
