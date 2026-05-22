@@ -1,0 +1,160 @@
+:root {
+    --bg-color: #000000;
+    --panel-bg: #121212;
+    --panel-border: #333333;
+    --text-primary: #ffffff;
+    --text-secondary: #888888;
+    --accent: #ffffff;
+    --accent-bg: #222222;
+    --accent-hover: #333333;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+#solar-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+    cursor: grab;
+}
+
+#solar-canvas:active {
+    cursor: grabbing;
+}
+
+.ui-panel {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    padding: 16px;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--panel-border);
+    padding-bottom: 8px;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+input[type="date"] {
+    background: #000000;
+    border: 1px solid var(--panel-border);
+    color: var(--text-primary);
+    padding: 8px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+input[type="date"]:focus {
+    border-color: #666666;
+}
+
+button {
+    background: var(--accent-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--panel-border);
+    padding: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+button:hover {
+    background: var(--accent-hover);
+    border-color: #555555;
+}
+
+button:active {
+    background: #111111;
+}
+
+.spinner {
+    display: none;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+button.loading span {
+    display: none;
+}
+
+button.loading .spinner {
+    display: block;
+}
+
+#status-msg {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    min-height: 18px;
+}
+
+.instructions {
+    border-top: 1px solid var(--panel-border);
+    padding-top: 12px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
