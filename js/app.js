@@ -1,6 +1,7 @@
-import { PLANETS, state } from './config.js';
+import { PLANETS, state, TILT_ANGLE } from './config.js';
 import { fetchOrbitalElements } from './api.js';
 import { drawScene } from './renderer.js';
+import { solveKepler, calculate3DPosition } from './orbitMath.js';
 
 // #region DOM Elements
 const canvas = document.getElementById('solar-canvas');
@@ -24,6 +25,7 @@ function init() {
     updateBtn.addEventListener('click', handleUpdate);
     minorPlanetsCb.addEventListener('change', (e) => {
         state.showMinorPlanets = e.target.checked;
+        buildSidebarList();
         draw();
     });
 
@@ -37,6 +39,13 @@ function init() {
         if (!state.isDragging) return;
         state.offsetX = e.clientX - state.dragStartX;
         state.offsetY = e.clientY - state.dragStartY;
+        
+        // Break focus lock on drag/pan
+        if (state.focusedPlanetId) {
+            state.focusedPlanetId = null;
+            updateSidebarActiveHighlight();
+        }
+        
         draw();
     });
     window.addEventListener('mouseup', () => state.isDragging = false);
@@ -52,7 +61,8 @@ function init() {
         draw();
     }, { passive: false });
 
-    // Initial draw (empty)
+    // Build empty/initial status sidebar
+    buildSidebarList();
     draw();
 }
 
@@ -81,6 +91,19 @@ async function handleUpdate() {
         for (const planet of PLANETS) {
             statusMsg.innerText = `Fetching ${planet.name}...`;
             const updatedPlanet = await fetchOrbitalElements(planet, dateStr, endDateStr);
+            
+            // Preload moons
+            if (planet.moons && planet.moons.length > 0) {
+                updatedPlanet.moonsData = [];
+                for (const moon of planet.moons) {
+                    statusMsg.innerText = `Fetching ${planet.name} - ${moon.name}...`;
+                    const updatedMoon = await fetchOrbitalElements(moon, dateStr, endDateStr, `500@${planet.id}`);
+                    updatedPlanet.moonsData.push(updatedMoon);
+                    // Wait 150ms buffer to respect rate limits
+                    await new Promise(r => setTimeout(r, 150));
+                }
+            }
+
             results.push(updatedPlanet);
 
             // Wait 150ms between requests to avoid NASA API 503 rate limits
@@ -93,6 +116,7 @@ async function handleUpdate() {
         });
 
         statusMsg.innerText = `Data loaded for ${dateStr}.`;
+        state.focusedPlanetId = null; // reset focus
 
         // Auto-scale to fit roughly up to Jupiter on load
         if (state.planetData['599']) {
@@ -102,6 +126,7 @@ async function handleUpdate() {
             state.offsetY = 0;
         }
 
+        buildSidebarList();
         draw();
 
     } catch (error) {
@@ -114,8 +139,103 @@ async function handleUpdate() {
 }
 // #endregion
 
+// #region Sidebar Navigation Panel
+function buildSidebarList() {
+    const listContainer = document.getElementById('planet-list');
+    const statusContainer = document.getElementById('planet-list-status');
+
+    if (!state.planetData || Object.keys(state.planetData).length === 0) {
+        listContainer.style.display = 'none';
+        statusContainer.style.display = 'block';
+        statusContainer.innerText = 'No data loaded. Click "Calculate / Update" to load moons.';
+        return;
+    }
+
+    statusContainer.style.display = 'none';
+    listContainer.style.display = 'flex';
+    listContainer.innerHTML = '';
+
+    Object.values(state.planetData).forEach(planet => {
+        // Only list planets that have moons
+        if (!planet.moons || planet.moons.length === 0) return;
+
+        // Hide dwarf/minor planets in the list if the checkbox is unchecked
+        if (planet.isMinor && !state.showMinorPlanets) return;
+
+        const item = document.createElement('div');
+        item.className = 'planet-item';
+        if (state.focusedPlanetId === planet.id) {
+            item.classList.add('active');
+        }
+        item.dataset.planetId = planet.id;
+
+        const moonNamesStr = planet.moons.map(m => m.name).join(', ');
+        const moonCount = planet.moons.length;
+
+        item.innerHTML = `
+            <div class="planet-dot" style="color: ${planet.color};"></div>
+            <div class="planet-info">
+                <div class="planet-name-row">
+                    <span class="planet-name">${planet.name}</span>
+                    <span class="moon-count">${moonCount} ${moonCount === 1 ? 'moon' : 'moons'}</span>
+                </div>
+                <div class="moon-names">${moonNamesStr}</div>
+            </div>
+        `;
+
+        item.addEventListener('click', () => {
+            if (state.focusedPlanetId === planet.id) {
+                // Unlock focus if clicked again
+                state.focusedPlanetId = null;
+            } else {
+                state.focusedPlanetId = planet.id;
+
+                // Adjust camera zoom to beautifully frame the planet's moons
+                if (planet.moonsData && planet.moonsData.length > 0) {
+                    const maxA = Math.max(...planet.moonsData.map(m => m.elements.a));
+                    // Frame outermost moon orbit to fit 25% of viewport min dimension
+                    state.currentScale = (Math.min(canvas.width, canvas.height) / 4) / maxA;
+                } else {
+                    state.currentScale = 5e-5;
+                }
+            }
+            updateSidebarActiveHighlight();
+            draw();
+        });
+
+        listContainer.appendChild(item);
+    });
+}
+
+function updateSidebarActiveHighlight() {
+    const items = document.querySelectorAll('.planet-item');
+    items.forEach(item => {
+        if (item.dataset.planetId === state.focusedPlanetId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+// #endregion
+
 // #region Drawing Coordinator
 function draw() {
+    if (state.focusedPlanetId && state.planetData[state.focusedPlanetId]) {
+        const planet = state.planetData[state.focusedPlanetId];
+        const elems = planet.elements;
+        const E = solveKepler(elems.ma, elems.e);
+        const pos3d = calculate3DPosition(elems, E);
+
+        // Center on the focused planet's projected 2D coordinates
+        // Rotate around X-axis for isometric tilt to match project3Dto2D
+        const y_rot = pos3d.y * Math.cos(TILT_ANGLE) - pos3d.z * Math.sin(TILT_ANGLE);
+        const x_rot = pos3d.x;
+
+        state.offsetX = -x_rot * state.currentScale;
+        state.offsetY = y_rot * state.currentScale;
+    }
+
     drawScene(ctx, canvas.width, canvas.height, state.currentScale, state.offsetX, state.offsetY, state.planetData);
 }
 // #endregion

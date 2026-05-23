@@ -4,17 +4,63 @@ export const DEG_TO_RAD = Math.PI / 180;
 export const AU_KM = 149597870.7; // 1 Astronomical Unit in km //not yet implemented but maybe useful for displaying distances.
 
 export const PLANETS = [
-    { id: '199', name: 'Mercury', color: '#a8a8a8', radius: 3 },
-    { id: '299', name: 'Venus', color: '#e0cda4', radius: 4 },
-    { id: '399', name: 'Earth', color: '#6b93d6', radius: 4.5 },
-    { id: '499', name: 'Mars', color: '#c1440e', radius: 3.5 },
-    { id: '599', name: 'Jupiter', color: '#d8ca9d', radius: 8 },
-    { id: '699', name: 'Saturn', color: '#ead6b8', radius: 7 },
-    { id: '799', name: 'Uranus', color: '#d1e7e7', radius: 5.5 },
-    { id: '899', name: 'Neptune', color: '#5b5ddf', radius: 5.5 },
+    { 
+        id: '199', name: 'Mercury', color: '#a8a8a8', radius: 3 
+    },
+    { 
+        id: '299', name: 'Venus', color: '#e0cda4', radius: 4 
+    },
+    { 
+        id: '399', name: 'Earth', color: '#6b93d6', radius: 4.5,
+        moons: [
+            { id: '301', name: 'Moon', color: '#dddddd', radius: 1.5 }
+        ]
+    },
+    { 
+        id: '499', name: 'Mars', color: '#c1440e', radius: 3.5,
+        moons: [
+            { id: '401', name: 'Phobos', color: '#8c8c8c', radius: 1 },
+            { id: '402', name: 'Deimos', color: '#7c7c7c', radius: 1 }
+        ]
+    },
+    { 
+        id: '599', name: 'Jupiter', color: '#d8ca9d', radius: 8,
+        moons: [
+            { id: '501', name: 'Io', color: '#f3e5ab', radius: 1.8 },
+            { id: '502', name: 'Europa', color: '#b0e0e6', radius: 1.6 },
+            { id: '503', name: 'Ganymede', color: '#d2b48c', radius: 2.2 },
+            { id: '504', name: 'Callisto', color: '#a9a9a9', radius: 2 }
+        ]
+    },
+    { 
+        id: '699', name: 'Saturn', color: '#ead6b8', radius: 7,
+        moons: [
+            { id: '601', name: 'Mimas', color: '#b0b0b0', radius: 1 },
+            { id: '602', name: 'Enceladus', color: '#f0f8ff', radius: 1.2 },
+            { id: '606', name: 'Titan', color: '#ffb366', radius: 2.5 }
+        ]
+    },
+    { 
+        id: '799', name: 'Uranus', color: '#d1e7e7', radius: 5.5,
+        moons: [
+            { id: '704', name: 'Titania', color: '#e6e6e6', radius: 1.5 },
+            { id: '705', name: 'Oberon', color: '#dcdcdc', radius: 1.4 }
+        ]
+    },
+    { 
+        id: '899', name: 'Neptune', color: '#5b5ddf', radius: 5.5,
+        moons: [
+            { id: '801', name: 'Triton', color: '#e0eeee', radius: 1.8 }
+        ]
+    },
 
     // Dwarf and Minor Planets
-    { id: '999', name: 'Pluto', color: '#dddddd', radius: 2, isMinor: true },
+    { 
+        id: '999', name: 'Pluto', color: '#dddddd', radius: 2, isMinor: true,
+        moons: [
+            { id: '901', name: 'Charon', color: '#a9a9a9', radius: 1.2 }
+        ]
+    },
     { id: '1;', name: 'Ceres', color: '#a2b9bc', radius: 2, isMinor: true },
     { id: '4;', name: 'Vesta', color: '#b2ad7f', radius: 1.8, isMinor: true },
     { id: '136199;', name: 'Eris', color: '#f7786b', radius: 2.1, isMinor: true },
@@ -23,7 +69,7 @@ export const PLANETS = [
 ];
 
 export const TILT_ANGLE = 60 * DEG_TO_RAD; // Angle to rotate X-axis for isometric view
-export const CROSSHAIR_COLOR = 'rgba(255, 255, 255, 0.4)';
+export const CROSSHAIR_COLOR = 'rgba(255, 255, 255, 0.2)';
 export const CROSSHAIR_THICKNESS = 1;
 // #endregion
 
@@ -36,6 +82,7 @@ export const state = {
     isDragging: false,
     dragStartX: 0,
     dragStartY: 0,
-    showMinorPlanets: false // Whether to display dwarf and minor planets on the canvas
+    showMinorPlanets: false, // Whether to display dwarf and minor planets on the canvas
+    focusedPlanetId: null // ID of planet to center/lock view on
 };
 // #endregion

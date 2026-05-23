@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="ui-panel">
+    <div class="ui-panel left-panel">
         <h1>Solar System Explorer</h1>
         
         <div class="control-group">
@@ -34,6 +34,14 @@
         <div class="instructions">
             <p><strong>Controls:</strong></p>
             <p>Scroll to Zoom | Drag to Pan</p>
+        </div>
+    </div>
+
+    <div class="ui-panel right-panel" id="planet-list-panel">
+        <h1>Planets with Moons</h1>
+        <div id="planet-list-status" class="planet-list-status">No data loaded. Click "Calculate / Update" to load moons.</div>
+        <div class="planet-list" id="planet-list" style="display: none;">
+            <!-- Generated dynamically -->
         </div>
     </div>
 
