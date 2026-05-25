@@ -1,3 +1,5 @@
+import { GRAVITATIONAL_PARAMETERS } from './config.js';
+
 // #region Kepler Equation Solver
 export function solveKepler(M, e) {
     let E = M;
@@ -32,5 +34,18 @@ export function calculate3DPosition(elements, E) {
     const z = x_prime * (sin_i * sin_w) + y_prime * (sin_i * cos_w);
 
     return { x, y, z };
+}
+// #endregion
+
+// #region Mean Anomaly Propagation
+export function propagateMeanAnomaly(elements, bodyId, dtSeconds) {
+    const mu = GRAVITATIONAL_PARAMETERS[bodyId];
+    if (!mu) return elements.ma; // Fallback to original MA if not defined
+    
+    // Mean motion n = sqrt(mu / a^3)
+    const n = Math.sqrt(mu / Math.pow(elements.a, 3));
+    
+    // M = M_0 + n * dt
+    return elements.ma + n * dtSeconds;
 }
 // #endregion

@@ -34,6 +34,30 @@
 
         <div id="status-msg">Select a date to visualize orbits.</div>
 
+        <div class="control-group timelapse-container" id="timelapse-container" style="display: none;">
+            <label>Time Lapse</label>
+            <div class="timelapse-row">
+                <button id="play-pause-btn" class="timelapse-btn">
+                    <span id="play-pause-icon">▶</span> <span id="play-pause-text">Play</span>
+                </button>
+                <button id="reset-time-btn" class="timelapse-btn">
+                    <span>↺ Reset</span>
+                </button>
+            </div>
+            
+            <div class="speed-slider-group">
+                <div class="speed-slider-labels">
+                    <span class="speed-label-text">Speed</span>
+                    <span id="speed-display" class="speed-display-val">10 days/sec</span>
+                </div>
+                <input type="range" id="speed-slider" min="1" max="180" value="10">
+            </div>
+
+            <div id="simulated-date-display" class="simulated-date-display">
+                Date: -
+            </div>
+        </div>
+
         <div class="instructions">
             <p><strong>Controls:</strong></p>
             <p>Scroll to Zoom | Drag to Pan</p>
@@ -50,6 +74,11 @@
     </div>
 
     <canvas id="solar-canvas"></canvas>
+
+    <div class="ui-panel bottom-right-panel" id="inclination-panel">
+        <label for="inclination-slider">Viewing Inclination: <span id="inclination-display">60°</span></label>
+        <input type="range" id="inclination-slider" min="0" max="90" value="60">
+    </div>
 
     <script type="module" src="js/app.js"></script>
 </body>

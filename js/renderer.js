@@ -1,6 +1,6 @@
 import { project3Dto2D } from './projection.js';
-import { calculate3DPosition, solveKepler } from './orbitMath.js';
-import { CROSSHAIR_COLOR, CROSSHAIR_THICKNESS, state, AU_KM, TILT_ANGLE } from './config.js';
+import { calculate3DPosition, solveKepler, propagateMeanAnomaly } from './orbitMath.js';
+import { CROSSHAIR_COLOR, CROSSHAIR_THICKNESS, state, AU_KM } from './config.js';
 
 // #region Canvas Drawing Routines
 export function drawScene(ctx, width, height, scale, offsetX, offsetY, planetData) {
@@ -27,14 +27,21 @@ export function drawScene(ctx, width, height, scale, offsetX, offsetY, planetDat
     ctx.fill();
     ctx.shadowBlur = 0; // reset
 
+    // Calculate elapsed time in seconds for orbital propagation
+    const dtSeconds = (state.simulatedTime && state.epochTime)
+        ? (state.simulatedTime.getTime() - state.epochTime.getTime()) / 1000
+        : 0;
+
     // Draw Orbits and Planets
     Object.values(planetData).forEach(planet => {
         if (planet.isMinor && !state.showMinorPlanets) return;
 
         const elems = planet.elements;
-        const E = solveKepler(elems.ma, elems.e);
+        const currentMa = propagateMeanAnomaly(elems, planet.id, dtSeconds);
+        const E = solveKepler(currentMa, elems.e);
         const pos3d = calculate3DPosition(elems, E);
 
+        // Draw planet orbit (heliocentric)
         drawOrbit(ctx, width, height, scale, offsetX, offsetY, planet);
 
         // Draw moons if they are loaded and the scale is zoomed in enough
@@ -43,8 +50,9 @@ export function drawScene(ctx, width, height, scale, offsetX, offsetY, planetDat
                 const orbitRadiusPx = moon.elements.a * scale;
                 // Only show if the moon orbit is visually outside the planet body and resolved
                 if (orbitRadiusPx > planet.radius + 3) {
-                    drawMoonOrbit(ctx, width, height, scale, offsetX, offsetY, pos3d.x, pos3d.y, pos3d.z, moon);
-                    drawMoon(ctx, width, height, scale, offsetX, offsetY, pos3d.x, pos3d.y, pos3d.z, moon);
+                    // Draw moon orbit (planetocentric)
+                    drawOrbit(ctx, width, height, scale, offsetX, offsetY, moon, pos3d, true);
+                    drawMoon(ctx, width, height, scale, offsetX, offsetY, pos3d.x, pos3d.y, pos3d.z, moon, dtSeconds);
                 }
             });
         }
@@ -72,10 +80,10 @@ function drawAsteroidBelt(ctx, cx, cy, scale) {
     const outerRadius = 3.2 * AU_KM; // outer edge of belt in km (approx 3.2 AU)
 
     const rxInner = innerRadius * scale;
-    const ryInner = innerRadius * Math.cos(TILT_ANGLE) * scale;
-    
+    const ryInner = innerRadius * Math.cos(state.tiltAngle) * scale;
+
     const rxOuter = outerRadius * scale;
-    const ryOuter = outerRadius * Math.cos(TILT_ANGLE) * scale;
+    const ryOuter = outerRadius * Math.cos(state.tiltAngle) * scale;
 
     ctx.beginPath();
     ctx.ellipse(cx, cy, rxOuter, ryOuter, 0, 0, 2 * Math.PI);
@@ -84,26 +92,32 @@ function drawAsteroidBelt(ctx, cx, cy, scale) {
     ctx.fill('evenodd');
 }
 
-function drawOrbit(ctx, width, height, scale, offsetX, offsetY, planet) {
-    const elems = planet.elements;
-    ctx.strokeStyle = `${planet.color}88`; // slightly transparent
-    ctx.lineWidth = 1.5;
+function drawOrbit(ctx, width, height, scale, offsetX, offsetY, body, parentPos = { x: 0, y: 0, z: 0 }, isMoon = false) {
+    const elems = body.elements;
+    ctx.strokeStyle = `${body.color}${isMoon ? '2b' : '88'}`;
+    ctx.lineWidth = isMoon ? 1 : 1.5;
     ctx.beginPath();
 
-    // Draw path using Eccentric Anomaly from 0 to 2PI
-    const steps = 120;
+    const steps = isMoon ? 120 : 240;
     for (let i = 0; i <= steps; i++) {
         const E = (i / steps) * 2 * Math.PI;
         const pos3d = calculate3DPosition(elems, E);
-        const pos2d = project3Dto2D(pos3d.x, pos3d.y, pos3d.z, width, height, scale, offsetX, offsetY);
+        const pos2d = project3Dto2D(
+            parentPos.x + pos3d.x,
+            parentPos.y + pos3d.y,
+            parentPos.z + pos3d.z,
+            width, height, scale, offsetX, offsetY
+        );
         if (i === 0) ctx.moveTo(pos2d.x2d, pos2d.y2d);
         else ctx.lineTo(pos2d.x2d, pos2d.y2d);
     }
     ctx.stroke();
 
-    // Draw Z-axis drop lines at Periapsis (E=0) and Apoapsis (E=PI)
-    drawDropLine(ctx, width, height, scale, offsetX, offsetY, elems, 0, planet.color, 'PA');
-    drawDropLine(ctx, width, height, scale, offsetX, offsetY, elems, Math.PI, planet.color, 'AA');
+    if (!isMoon) {
+        // Draw Z-axis drop lines at Periapsis (E=0) and Apoapsis (E=PI)
+        drawDropLine(ctx, width, height, scale, offsetX, offsetY, elems, 0, body.color, 'PA');
+        drawDropLine(ctx, width, height, scale, offsetX, offsetY, elems, Math.PI, body.color, 'AA');
+    }
 }
 
 function drawDropLine(ctx, width, height, scale, offsetX, offsetY, elems, E, color, label = null) {
@@ -155,31 +169,11 @@ function drawPlanet(ctx, width, height, scale, offsetX, offsetY, planet, pos3d, 
     ctx.fillText(planet.name, pos2d.x2d + 8, pos2d.y2d + 3);
 }
 
-function drawMoonOrbit(ctx, width, height, scale, offsetX, offsetY, parentX, parentY, parentZ, moon) {
-    const elems = moon.elements;
-    ctx.strokeStyle = `${moon.color}2b`; // faint moon orbit
-    ctx.lineWidth = 1;
-    ctx.beginPath();
 
-    const steps = 60;
-    for (let i = 0; i <= steps; i++) {
-        const E = (i / steps) * 2 * Math.PI;
-        const pos3dRel = calculate3DPosition(elems, E);
-        const pos2d = project3Dto2D(
-            parentX + pos3dRel.x,
-            parentY + pos3dRel.y,
-            parentZ + pos3dRel.z,
-            width, height, scale, offsetX, offsetY
-        );
-        if (i === 0) ctx.moveTo(pos2d.x2d, pos2d.y2d);
-        else ctx.lineTo(pos2d.x2d, pos2d.y2d);
-    }
-    ctx.stroke();
-}
-
-function drawMoon(ctx, width, height, scale, offsetX, offsetY, parentX, parentY, parentZ, moon) {
+function drawMoon(ctx, width, height, scale, offsetX, offsetY, parentX, parentY, parentZ, moon, dtSeconds) {
     const elems = moon.elements;
-    const E = solveKepler(elems.ma, elems.e);
+    const currentMa = propagateMeanAnomaly(elems, moon.id, dtSeconds);
+    const E = solveKepler(currentMa, elems.e);
     const pos3dRel = calculate3DPosition(elems, E);
     const pos2d = project3Dto2D(
         parentX + pos3dRel.x,

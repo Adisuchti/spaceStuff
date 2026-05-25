@@ -68,9 +68,45 @@ export const PLANETS = [
     { id: '136472;', name: 'Makemake', color: '#b1cbbb', radius: 2, isMinor: true }
 ];
 
-export const TILT_ANGLE = 60 * DEG_TO_RAD; // Angle to rotate X-axis for isometric view
 export const CROSSHAIR_COLOR = 'rgba(255, 255, 255, 0.2)';
 export const CROSSHAIR_THICKNESS = 1;
+
+// Standard Gravitational Parameters (mu = G * M) in km^3/s^2
+// For planets: the parent body is the Sun (1.32712440018e11)
+// For moons: the parent body is their respective planet
+export const GRAVITATIONAL_PARAMETERS = {
+    // Heliocentric (orbiting Sun)
+    '199': 1.32712440018e11, // Mercury
+    '299': 1.32712440018e11, // Venus
+    '399': 1.32712440018e11, // Earth
+    '499': 1.32712440018e11, // Mars
+    '599': 1.32712440018e11, // Jupiter
+    '699': 1.32712440018e11, // Saturn
+    '799': 1.32712440018e11, // Uranus
+    '899': 1.32712440018e11, // Neptune
+    '999': 1.32712440018e11, // Pluto
+    '1;': 1.32712440018e11,  // Ceres
+    '4;': 1.32712440018e11,  // Vesta
+    '136199;': 1.32712440018e11, // Eris
+    '136108;': 1.32712440018e11, // Haumea
+    '136472;': 1.32712440018e11, // Makemake
+
+    // Planetary systems (moons orbiting parent planets)
+    '301': 398600.44, // Earth (for Moon)
+    '401': 42828.37,  // Mars (for Phobos)
+    '402': 42828.37,  // Mars (for Deimos)
+    '501': 126686534, // Jupiter (for Io)
+    '502': 126686534, // Jupiter (for Europa)
+    '503': 126686534, // Jupiter (for Ganymede)
+    '504': 126686534, // Jupiter (for Callisto)
+    '601': 37931187,  // Saturn (for Mimas)
+    '602': 37931187,  // Saturn (for Enceladus)
+    '606': 37931187,  // Saturn (for Titan)
+    '704': 5793939,   // Uranus (for Titania)
+    '705': 5793939,   // Uranus (for Oberon)
+    '801': 6836529,   // Neptune (for Triton)
+    '901': 869        // Pluto (for Charon)
+};
 // #endregion
 
 // #region Application State
@@ -83,6 +119,13 @@ export const state = {
     dragStartX: 0,
     dragStartY: 0,
     showMinorPlanets: false, // Whether to display dwarf and minor planets on the canvas
-    focusedPlanetId: null // ID of planet to center/lock view on
+    focusedPlanetId: null, // ID of planet to center/lock view on
+    tiltAngle: 60 * DEG_TO_RAD, // User-controlled viewing inclination (tilt angle)
+
+    // Animation state
+    isAnimating: false,
+    animationSpeed: 10, // Simulated days per real second
+    epochTime: null, // Initial loaded date (Date object)
+    simulatedTime: null // Active simulation date (Date object)
 };
 // #endregion

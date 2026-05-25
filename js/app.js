@@ -1,7 +1,7 @@
-import { PLANETS, state, TILT_ANGLE } from './config.js';
+import { PLANETS, state } from './config.js';
 import { fetchOrbitalElements } from './api.js';
 import { drawScene } from './renderer.js';
-import { solveKepler, calculate3DPosition } from './orbitMath.js';
+import { solveKepler, calculate3DPosition, propagateMeanAnomaly } from './orbitMath.js';
 
 // #region DOM Elements
 const canvas = document.getElementById('solar-canvas');
@@ -10,6 +10,20 @@ const dateInput = document.getElementById('date-input');
 const updateBtn = document.getElementById('update-btn');
 const statusMsg = document.getElementById('status-msg');
 const minorPlanetsCb = document.getElementById('minor-planets-cb');
+
+// Time Lapse DOM Elements
+const timelapseContainer = document.getElementById('timelapse-container');
+const playPauseBtn = document.getElementById('play-pause-btn');
+const playPauseIcon = document.getElementById('play-pause-icon');
+const playPauseText = document.getElementById('play-pause-text');
+const resetTimeBtn = document.getElementById('reset-time-btn');
+const speedSlider = document.getElementById('speed-slider');
+const speedDisplay = document.getElementById('speed-display');
+const simulatedDateDisplay = document.getElementById('simulated-date-display');
+
+// Inclination DOM Elements
+const inclinationSlider = document.getElementById('inclination-slider');
+const inclinationDisplay = document.getElementById('inclination-display');
 // #endregion
 
 // #region Initialization
@@ -28,6 +42,14 @@ function init() {
         buildSidebarList();
         draw();
     });
+
+    // Time Lapse Listeners
+    playPauseBtn.addEventListener('click', toggleAnimation);
+    resetTimeBtn.addEventListener('click', resetAnimationTime);
+    speedSlider.addEventListener('input', handleSpeedChange);
+
+    // Inclination Listener
+    inclinationSlider.addEventListener('input', handleInclinationChange);
 
     // Pan & Zoom Listeners
     canvas.addEventListener('mousedown', (e) => {
@@ -124,6 +146,13 @@ async function handleUpdate() {
 
         statusMsg.innerText = `Data loaded for ${dateStr}.`;
         state.focusedPlanetId = null; // reset focus
+
+        // Initialize/Reset simulated time state
+        stopAnimation();
+        state.epochTime = new Date(dateStr + 'T00:00:00');
+        state.simulatedTime = new Date(state.epochTime.getTime());
+        updateSimulatedDateDisplay();
+        timelapseContainer.style.display = 'flex';
 
         // Auto-scale to fit roughly up to Jupiter on load
         if (state.planetData['599']) {
@@ -231,12 +260,19 @@ function draw() {
     if (state.focusedPlanetId && state.planetData[state.focusedPlanetId]) {
         const planet = state.planetData[state.focusedPlanetId];
         const elems = planet.elements;
-        const E = solveKepler(elems.ma, elems.e);
+        
+        // Calculate dynamic Mean Anomaly for camera lock on simulated positions
+        const dtSeconds = (state.simulatedTime && state.epochTime)
+            ? (state.simulatedTime.getTime() - state.epochTime.getTime()) / 1000
+            : 0;
+            
+        const currentMa = propagateMeanAnomaly(elems, planet.id, dtSeconds);
+        const E = solveKepler(currentMa, elems.e);
         const pos3d = calculate3DPosition(elems, E);
 
         // Center on the focused planet's projected 2D coordinates
         // Rotate around X-axis for isometric tilt to match project3Dto2D
-        const y_rot = pos3d.y * Math.cos(TILT_ANGLE) - pos3d.z * Math.sin(TILT_ANGLE);
+        const y_rot = pos3d.y * Math.cos(state.tiltAngle) - pos3d.z * Math.sin(state.tiltAngle);
         const x_rot = pos3d.x;
 
         state.offsetX = -x_rot * state.currentScale;
@@ -244,6 +280,86 @@ function draw() {
     }
 
     drawScene(ctx, canvas.width, canvas.height, state.currentScale, state.offsetX, state.offsetY, state.planetData);
+}
+// #endregion
+
+// #region Animation Controller Loop
+let animationFrameId = null;
+
+function animate(currentTime) {
+    if (!state.isAnimating) return;
+    
+    if (!state.lastFrameTime) {
+        state.lastFrameTime = currentTime;
+    }
+    
+    const deltaMs = currentTime - state.lastFrameTime;
+    state.lastFrameTime = currentTime;
+    
+    // Advancing simulated time
+    // Convert speed (days/sec) to simulated milliseconds per real-time millisecond:
+    // speed * 24 * 3600 * 1000 / 1000 = speed * 86400
+    const elapsedSimulatedMs = deltaMs * state.animationSpeed * 86400;
+    
+    state.simulatedTime = new Date(state.simulatedTime.getTime() + elapsedSimulatedMs);
+    
+    updateSimulatedDateDisplay();
+    draw();
+    
+    animationFrameId = requestAnimationFrame(animate);
+}
+
+function toggleAnimation() {
+    if (state.isAnimating) {
+        stopAnimation();
+    } else {
+        startAnimation();
+    }
+}
+
+function startAnimation() {
+    state.isAnimating = true;
+    state.lastFrameTime = null;
+    playPauseIcon.innerText = '⏸';
+    playPauseText.innerText = 'Pause';
+    animationFrameId = requestAnimationFrame(animate);
+}
+
+function stopAnimation() {
+    state.isAnimating = false;
+    playPauseIcon.innerText = '▶';
+    playPauseText.innerText = 'Play';
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+}
+
+function resetAnimationTime() {
+    if (!state.epochTime) return;
+    stopAnimation();
+    state.simulatedTime = new Date(state.epochTime.getTime());
+    updateSimulatedDateDisplay();
+    draw();
+}
+
+function handleSpeedChange(e) {
+    const val = parseInt(e.target.value, 10);
+    state.animationSpeed = val;
+    speedDisplay.innerText = `${val} ${val === 1 ? 'day' : 'days'}/sec`;
+}
+
+function updateSimulatedDateDisplay() {
+    if (!state.simulatedTime) return;
+    const dateOptions = { year: 'numeric', month: 'short', day: '2-digit' };
+    simulatedDateDisplay.innerText = `Date: ${state.simulatedTime.toLocaleDateString(undefined, dateOptions)}`;
+}
+
+function handleInclinationChange(e) {
+    const deg = parseInt(e.target.value, 10);
+    state.tiltAngle = deg * (Math.PI / 180);
+    inclinationDisplay.innerText = `${deg}°`;
+    draw();
 }
 // #endregion
 
