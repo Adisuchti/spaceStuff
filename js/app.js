@@ -53,11 +53,18 @@ function init() {
     canvas.addEventListener('wheel', (e) => {
         e.preventDefault();
         const zoomFactor = 1.1;
+        const oldScale = state.currentScale;
         if (e.deltaY < 0) {
             state.currentScale *= zoomFactor;
         } else {
             state.currentScale /= zoomFactor;
         }
+        
+        // Scale offsets so that zoom centers on the screen center
+        const scaleRatio = state.currentScale / oldScale;
+        state.offsetX *= scaleRatio;
+        state.offsetY *= scaleRatio;
+        
         draw();
     }, { passive: false });
 
